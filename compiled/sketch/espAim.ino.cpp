@@ -34,23 +34,6 @@ struct trackerServoData {
 
 trackerServoData servoData = {servoPin, servoMin, servoMax, servoCenter, servoCenter, servoCenter, 0, 0, 0, 0, 0, 0, true, 5};
 
-#line 35 "e:\\Overig\\espAim\\espAim.ino"
-void setup();
-#line 63 "e:\\Overig\\espAim\\espAim.ino"
-float deg2rad(float deg);
-#line 66 "e:\\Overig\\espAim\\espAim.ino"
-float rad2deg(float rad);
-#line 70 "e:\\Overig\\espAim\\espAim.ino"
-float heading(GPSLocation curLoc, GPSLocation newLoc);
-#line 85 "e:\\Overig\\espAim\\espAim.ino"
-void setDirection(GPSLocation curLoc, GPSLocation newLoc);
-#line 111 "e:\\Overig\\espAim\\espAim.ino"
-void moveServosInit();
-#line 141 "e:\\Overig\\espAim\\espAim.ino"
-void moveServosStep();
-#line 164 "e:\\Overig\\espAim\\espAim.ino"
-void loop();
-#line 35 "e:\\Overig\\espAim\\espAim.ino"
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
