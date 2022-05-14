@@ -1,0 +1,5 @@
+{
+    "board": "esp32:esp32:node32s",
+    "port": "COM9",
+    "sketch": "espAim.ino"
+}
