@@ -1,5 +1,3 @@
-#include <Arduino.h>
-#line 1 "e:\\Overig\\espAim\\espAim.ino"
 
 #include "trackingMotors.h"
 
@@ -14,19 +12,6 @@ struct GPSLocation {
 
 int servoTime;
 
-#line 15 "e:\\Overig\\espAim\\espAim.ino"
-void setup();
-#line 40 "e:\\Overig\\espAim\\espAim.ino"
-float deg2rad(float deg);
-#line 43 "e:\\Overig\\espAim\\espAim.ino"
-float rad2deg(float rad);
-#line 47 "e:\\Overig\\espAim\\espAim.ino"
-float heading(GPSLocation curLoc, GPSLocation newLoc);
-#line 62 "e:\\Overig\\espAim\\espAim.ino"
-void setDirection(GPSLocation curLoc, GPSLocation newLoc);
-#line 90 "e:\\Overig\\espAim\\espAim.ino"
-void loop();
-#line 15 "e:\\Overig\\espAim\\espAim.ino"
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -81,13 +66,13 @@ void setDirection(GPSLocation curLoc, GPSLocation newLoc){
   //Figure out if it is to the front or to the back
   if (abs(direction) < 90){
     Serial.println("Heading is in front of the device");
-    trackingDirection.objectFront = true;
+    trackingAltitude.objectFront = true;
     trackingDirection.NewLocation = map(direction, -90, 90, trackingDirection.Min, trackingDirection.Max);
     return;
   }
 
   Serial.println("Heading is behind the device");
-  trackingDirection.objectFront = false;
+  trackingAltitude.objectFront = false;
 
   if(direction > 0){
       Serial.println("Heading is to the right");
@@ -110,4 +95,3 @@ void loop() {
 
   //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
 }
-
