@@ -9,19 +9,29 @@ class planeInformation{
     float areaMinLon;
     float areaMaxLon;
 
-    char identifier;
+    String identifier;
     int updateSec;
-
-    double planeLat;
-    double planeLon;
-    double planeAlt;
 
     double curLat;
     double curLon;
     double curAlt;
 
+    long ICAO_Addr;
+    double planeLat;
+    double planeLon;
+    int planeTrack;
+    double planeAlt;
+    int planeSpeed;
+    String planeType;
+    String planeRegistration;
+    String Departure;
+    String Destination;
+    String FlightNumber;
+    String FlightNumber2;
+
+
     planeInformation();
-    void init(float curlat, float curlon);
+    void init(double curlat, double curlon);
     void update();
     void updateURL();
 

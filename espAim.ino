@@ -1,6 +1,10 @@
 #include "trackingMotors.h"
 #include "planeInformation.h"
 
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+
 
 trackingMotors trackingDirection; 
 trackingMotors trackingAltitude;
@@ -18,6 +22,11 @@ void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
   Serial.println("Hello, ESP32!");
+  delay(2000);
+
+  Serial.println("Setting up WiFi");
+  WiFi.encryptionType(3);
+  WiFi.begin("Fam.Salden2","tomenluc");
   
   Serial.println("Initialising motors");
   ESP32PWM::allocateTimer(0);
@@ -35,6 +44,10 @@ void setup() {
   Serial.print("Servo set to number:");
   Serial.println(trackingDirection.NewLocation);
   trackingAltitude.NewLocation = 1995;
+
+  Serial.print("Connected with ip: ");
+  Serial.println(WiFi.localIP());
+
 }
 
 
@@ -45,6 +58,14 @@ void loop() {
   trackingDirection.update();
   trackingAltitude.update();
   delay(10);
+
+  if (Serial.available() > 0){
+    String identifier = Serial.readString();
+    identifier.trim();
+    plane.identifier = identifier;
+    Serial.println(plane.identifier);
+    
+  }
 
   //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
 }
@@ -86,24 +107,25 @@ void setDirectionAltitude(double curLat, double curLon, double curAlt, double ne
   //Set the altitude, irrespective of if it is in the front or the back (from 0 to 90 degrees)
   // Need distance...
 
-  //Figure out if it is to the front or to the back
-  if (abs(direction) < 90){
-    Serial.println("Heading is in front of the device");
+  //Figure out if the direction is left or right
+  if (direction > 0){
+    Serial.println("Heading is to the right");
     trackingAltitude.objectFront = true;
-    trackingDirection.NewLocation = map(direction, -90, 90, trackingDirection.Min, trackingDirection.Max);
+    trackingDirection.NewLocation = map(direction, 0, 180, trackingDirection.Max, trackingDirection.Min);
     return;
   }
 
   Serial.println("Heading is behind the device");
   trackingAltitude.objectFront = false;
+  trackingDirection.NewLocation = map(direction, 0, -180, trackingDirection.Min, trackingDirection.Max);
 
-  if(direction > 0){
-      Serial.println("Heading is to the right");
-      trackingDirection.NewLocation = map(direction, 91, 180, trackingDirection.Center, trackingDirection.Min);
-      return;
-  }
+  // if(direction > 0){
+  //     Serial.println("Heading is to the right");
+  //     trackingDirection.NewLocation = map(direction, 91, 180, trackingDirection.Center, trackingDirection.Min);
+  //     return;
+  // }
 
-  Serial.println("Heading is to the left");
-  trackingDirection.NewLocation = map(direction, -91, -180, trackingDirection.Center, trackingDirection.Max);
+  // Serial.println("Heading is to the left");
+  // trackingDirection.NewLocation = map(direction, -91, -180, trackingDirection.Center, trackingDirection.Max);
   return;
 }
