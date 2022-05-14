@@ -5,6 +5,7 @@ int servoPin = 13;
 int servoMin = 500;
 int servoMax = 2500;
 int servoCenter = (servoMax + servoMin) / 2;
+int servoTime;
 
 struct GPSLocation {
     float latitude;
@@ -18,13 +19,18 @@ struct trackerServoData {
     int directionMax;
     int directionCenter;
     int directionLocation;
+    int directionNewLocation;
     int altitudePin;
     int altitudeMin;
     int altitudeMax;
     int altitudeCenter;
     int altitudeLocation;
+    int altitudeNewLocation;
     bool objectFront;
+    int millisperStep;
 };
+
+trackerServoData servoData = {servoPin, servoMin, servoMax, servoCenter, servoCenter, servoCenter, 0, 0, 0, 0, 0, 0, true, 5};
 
 void setup() {
   // put your setup code here, to run once:
@@ -34,18 +40,24 @@ void setup() {
   GPSLocation currentLocation = {51.997842, 4.374279, 0};
   GPSLocation planeLocation = {52.05110410396898, 4.468350219726553, 1000};
 
-  trackerServoData servoData = {servoPin, servoMin, servoMax, servoCenter, servoCenter, 0, 0, 0, 0, 0, true};
-
+  ESP32PWM::allocateTimer(0);
+	ESP32PWM::allocateTimer(1);
+	ESP32PWM::allocateTimer(2);
+	ESP32PWM::allocateTimer(3);
   headingservo.setPeriodHertz(50);
   headingservo.attach(servoPin, servoMin, servoMax);
-  headingservo.write(servoMin);
+
+  // Move to extremes (slowly)
+  Serial.println("StartingServos");
+  headingservo.write(servoCenter);
   delay(1000);
-  headingservo.write(servoMax);
-  delay(1000);  
-  servoData = setDirection(servoData, currentLocation, planeLocation);
+  moveServosInit();
+    
+  setDirection(currentLocation, planeLocation);
   Serial.print("Servo set to number:");
-  Serial.println(servoData.directionLocation);
-  headingservo.write(servoData.directionLocation);
+  Serial.println(servoData.directionNewLocation);
+  delay(10);
+  servoTime = millis();
 }
 
 float deg2rad(float deg) {
@@ -70,7 +82,7 @@ float heading(GPSLocation curLoc, GPSLocation newLoc) { //Function to determine 
   return angle; //Angle relative to North
 }
 
-trackerServoData setDirection(trackerServoData servoData, GPSLocation curLoc, GPSLocation newLoc){
+void setDirection(GPSLocation curLoc, GPSLocation newLoc){
   //Determine heading
   float direction = heading(curLoc, newLoc);
 
@@ -78,8 +90,8 @@ trackerServoData setDirection(trackerServoData servoData, GPSLocation curLoc, GP
   if (abs(direction) < 90){
     Serial.println("Heading is in front of the device");
     servoData.objectFront = true;
-    servoData.directionLocation = map(direction, -90, 90, servoData.directionMin, servoData.directionMax);
-    return servoData;
+    servoData.directionNewLocation = map(direction, -90, 90, servoData.directionMin, servoData.directionMax);
+    return;
   }
 
   Serial.println("Heading is behind the device");
@@ -87,15 +99,72 @@ trackerServoData setDirection(trackerServoData servoData, GPSLocation curLoc, GP
 
   if(direction > 0){
       Serial.println("Heading is to the right");
-      servoData.directionLocation = map(direction, 91, 180, servoData.directionCenter, servoData.directionMin);
-      return servoData;
+      servoData.directionNewLocation = map(direction, 91, 180, servoData.directionCenter, servoData.directionMin);
+      return;
   }
 
   Serial.println("Heading is to the left");
-  servoData.directionLocation = map(direction, -91, -180, servoData.directionCenter, servoData.directionMax);
-  return servoData;
+  servoData.directionNewLocation = map(direction, -91, -180, servoData.directionCenter, servoData.directionMax);
+  return;
+}
+
+void moveServosInit(){
+  int posHeading = servoCenter;
+  while (1){
+    posHeading = posHeading + 10;
+    if (posHeading > servoMax){
+      break;
+    }
+    headingservo.write(posHeading);
+    delay(10);
+  }
+
+  while (1){
+    posHeading = posHeading - 10;
+    if (posHeading < servoMin){
+      break;
+    }
+    headingservo.write(posHeading);
+    delay(10);
+  }
+
+  while(1){
+    posHeading = posHeading + 10;
+    if (posHeading > servoCenter){
+      break;
+    }
+    headingservo.write(posHeading);
+    delay(10);
+  }
+}
+
+void moveServosStep(){
+  if (millis() < (servoTime + servoData.millisperStep)){
+    return;
+  }
+  if (servoData.directionNewLocation == servoData.directionLocation){
+    return;
+  }
+  if (servoData.directionNewLocation > servoData.directionLocation){
+    servoData.directionLocation++;
+  }
+  if (servoData.directionNewLocation < servoData.directionLocation){
+    servoData.directionLocation--;
+  }
+  headingservo.write(servoData.directionLocation);
+  Serial.print("CurrentPosition: ");
+  Serial.print(servoData.directionLocation);
+  Serial.print(", NextPosition: ");
+  Serial.print(servoData.directionNewLocation);
+  Serial.print(", time: ");
+  Serial.println(millis());
+  servoTime = millis();
+  return;
 }
 void loop() {
   // put your main code here, to run repeatedly:
   delay(10); // this speeds up the simulation
+  moveServosStep();
+
+  //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
 }
