@@ -1,8 +1,12 @@
-
+#include <Arduino.h>
+#line 1 "e:\\Overig\\espAim\\espAim.ino"
 #include "trackingMotors.h"
+#include "planeInformation.h"
+
 
 trackingMotors trackingDirection; 
 trackingMotors trackingAltitude;
+planeInformation plane;
 
 struct GPSLocation {
     float latitude;
@@ -12,6 +16,19 @@ struct GPSLocation {
 
 int servoTime;
 
+#line 17 "e:\\Overig\\espAim\\espAim.ino"
+void setup();
+#line 41 "e:\\Overig\\espAim\\espAim.ino"
+void loop();
+#line 54 "e:\\Overig\\espAim\\espAim.ino"
+float deg2rad(float deg);
+#line 57 "e:\\Overig\\espAim\\espAim.ino"
+float rad2deg(float rad);
+#line 62 "e:\\Overig\\espAim\\espAim.ino"
+float getHeading(GPSLocation curLoc, GPSLocation newLoc);
+#line 78 "e:\\Overig\\espAim\\espAim.ino"
+void setDirectionAltitude(double curLat, double curLon, double curAlt, double newLat, double newLon, double newAlt);
+#line 17 "e:\\Overig\\espAim\\espAim.ino"
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -26,17 +43,29 @@ void setup() {
   trackingDirection.init(13, 2500, 500, 1500);
   trackingAltitude.init(12, 2500, 500, 1500);
 
-
-  GPSLocation currentLocation = {51.997842, 4.374279, 0};
-  GPSLocation planeLocation = {52.05110410396898, 4.468350219726553, 1000};
+  plane.init(51.997842,4.374279);
 
     
-  setDirection(currentLocation, planeLocation);
+  //setDirectionAltitude(currentLocation, planeLocation);
   Serial.print("Servo set to number:");
   Serial.println(trackingDirection.NewLocation);
   trackingAltitude.NewLocation = 1995;
 }
 
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  plane.update();
+  
+  trackingDirection.update();
+  trackingAltitude.update();
+  delay(10);
+
+  //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
+}
+
+
+//Some general functions (radians to degrees and back)
 float deg2rad(float deg) {
   return (deg * 71) / 4068;
 }
@@ -44,7 +73,8 @@ float rad2deg(float rad) {
   return (rad * 4068) / 71;
 }
 
-float heading(GPSLocation curLoc, GPSLocation newLoc) { //Function to determine the heading of the object
+//Function to get a heading from 2 GPS coordinates
+float getHeading(GPSLocation curLoc, GPSLocation newLoc) {
   //Convert all coordinates to radians
   float lat1 = deg2rad(curLoc.latitude);
   float lon1 = deg2rad(curLoc.longitude);
@@ -59,9 +89,17 @@ float heading(GPSLocation curLoc, GPSLocation newLoc) { //Function to determine 
   return angle; //Angle relative to North
 }
 
-void setDirection(GPSLocation curLoc, GPSLocation newLoc){
+//Function to set the direction and altitude of the servos
+void setDirectionAltitude(double curLat, double curLon, double curAlt, double newLat, double newLon, double newAlt){
+  //Create GPS struct
+  GPSLocation curLoc = {curLat, curLon, curAlt};
+  GPSLocation newLoc = {newLat, newLon, newAlt};
+
   //Determine heading
-  float direction = heading(curLoc, newLoc);
+  float direction = getHeading(curLoc, newLoc);
+
+  //Set the altitude, irrespective of if it is in the front or the back (from 0 to 90 degrees)
+  // Need distance...
 
   //Figure out if it is to the front or to the back
   if (abs(direction) < 90){
@@ -85,13 +123,3 @@ void setDirection(GPSLocation curLoc, GPSLocation newLoc){
   return;
 }
 
-
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  trackingDirection.update();
-  trackingAltitude.update();
-  delay(10);
-
-  //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
-}
