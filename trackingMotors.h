@@ -3,31 +3,21 @@
 
 class trackingMotors{
   public:
-    int directionMin;
-    int directionMax;
-    int directionCenter;
-    int directionLocation;
-    int directionNewLocation;
-
-    int altitudeMin;
-    int altitudeMax;
-    int altitudeCenter;
-    int altitudeLocation;
-    int altitudeNewLocation;
+    int servoPin;
+    int Min;
+    int Max;
+    int Center;
+    int Location;
+    int NewLocation;
     
     bool objectFront;
     int millisperStep;
 
     trackingMotors();
-    void init();
-    void print();
+    void init(int Pin, int maxLoc, int minLoc, int centerLoc);
     void update();
 
-    Servo directionServo;
-    Servo altitudeServo;
-    
-
   private:
-
-    void initMoving(Servo movedServo, int min, int max);
+    Servo Servomotor;
+    void initMoving();
 };
