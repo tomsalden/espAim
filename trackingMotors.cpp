@@ -5,7 +5,7 @@ trackingMotors::trackingMotors(){
 }
 
 void trackingMotors::init(int Pin, int maxLoc, int minLoc, int centerLoc){
-    millisperStep = 2;
+    millisperStep = 5;
 
     servoPin = Pin;
     Min = minLoc;
@@ -26,6 +26,7 @@ void trackingMotors::init(int Pin, int maxLoc, int minLoc, int centerLoc){
     //Move servos to their extremes for startup
     //initMoving();
     Serial.println("Initialisation is done!");
+    servoTime = millis();
 }
 
 void trackingMotors::initMoving(){
@@ -67,7 +68,7 @@ void trackingMotors::initMoving(){
 }
 
 void trackingMotors::update(){
-    static int servoTime = millis();
+    //static int servoTime = millis();
     if (millis() < (servoTime + millisperStep)){
         return;
     }
@@ -75,12 +76,16 @@ void trackingMotors::update(){
         return;
     }
     if (NewLocation > Location){
-        Location = Location + 2;
+        Location = Location + (NewLocation - Location)/5;
     }
     if (NewLocation < Location){
-        Location = Location - 2;
+        Location = Location + (NewLocation - Location)/5;
     }
     Servomotor.write(Location);
     servoTime = millis();
     return;
+}
+
+void trackingMotors::error(){
+    //Add sequence for an error :)
 }

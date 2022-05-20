@@ -1,14 +1,30 @@
 #include "trackingMotors.h"
 #include "planeInformation.h"
+#include "WiFiManager.h"
 
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include "credentials.h"
 
 
+//#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include "SPIFFS.h"
+#include "FS.h"
+
+#ifndef CREDENTIALS_H
+#pragma error "!!!!!!!!"
+#pragma error "PLEASE COPY credentials.h.template TO credentials.h"
+#pragma error "AND CONFIGURE YOUR CREDENTIALS"
+#pragma error "!!!!!!!!"
+#endif
+
+#define WM_CRED_FILE "/wm_cred.dat"
 
 trackingMotors trackingDirection; 
 trackingMotors trackingAltitude;
 planeInformation plane;
+WiFiManager WiFiMgr;
 
 struct GPSLocation {
     float latitude;
@@ -17,16 +33,23 @@ struct GPSLocation {
 };
 
 int servoTime;
+#define PAR_FILE "/par.dat"
+
+//Define webserver on port 80
+AsyncWebServer server(80);
+
+void notFound(AsyncWebServerRequest *request)
+{
+  request->send(404, "text/plain", "Not found");
+}
+
 
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial.println("Hello, ESP32!");
-  delay(2000);
+  Serial.println("Starting espAim!");
 
-  Serial.println("Setting up WiFi");
-  WiFi.encryptionType(3);
-  WiFi.begin("Fam.Salden2","tomenluc");
+  delay(2000);
   
   Serial.println("Initialising motors");
   ESP32PWM::allocateTimer(0);
@@ -39,14 +62,40 @@ void setup() {
 
   plane.init(51.997842,4.374279);
 
-    
-  //setDirectionAltitude(currentLocation, planeLocation);
-  Serial.print("Servo set to number:");
-  Serial.println(trackingDirection.NewLocation);
+  if (!SPIFFS.begin(true)){
+    Serial.println("An Error has occurred while mounting SPIFFS");
+    delay(1000);
+    ESP.restart();
+  }
+
+  listDir(SPIFFS, "/", 1);
+
+  WiFi.hostname(HOSTNAME);
+
+  Serial.println("Setting up WiFi");
+  //WiFi.encryptionType(3);
+  //WiFi.begin(AP_SSID,AP_PASS);
+  
+  if (!WiFiMgr.WiFiManagerBegin(AP_SSID, AP_PASS)){
+    // setup wifimanager config portal
+    WiFiMgr.setupWMWebpages();
+  }
+  WiFiMgr.setupWebPages();
+
+  server.onNotFound(notFound);
+  Serial.println("starting server");
+  server.begin();
+
+  
+
   trackingAltitude.NewLocation = 1995;
 
   Serial.print("Connected with ip: ");
   Serial.println(WiFi.localIP());
+
+  Serial.println("Starting Webserver");
+
+
 
 }
 
@@ -66,6 +115,7 @@ void loop() {
     Serial.println(plane.identifier);
     
   }
+
 
   //URL for Planes in NL: https://data-live.flightradar24.com/zones/fcgi/feed.js?bounds=55.5006,49.6228,0.6271,7.6836&faa=1&satellite=1&mlat=1&flarm=1&adsb=1&gnd=1&air=1&vehicles=1&estimated=1&maxage=14400&gliders=1&stats=0
 }
@@ -128,4 +178,107 @@ void setDirectionAltitude(double curLat, double curLon, double curAlt, double ne
   // Serial.println("Heading is to the left");
   // trackingDirection.NewLocation = map(direction, -91, -180, trackingDirection.Center, trackingDirection.Max);
   return;
+}
+
+// void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
+//   Serial.printf("Listing directory: %s\r\n", dirname);
+
+//   File root = fs.open(dirname);
+//   if (!root) {
+//     Serial.println("- failed to open directory");
+//     return;
+//   }
+//   if (!root.isDirectory()) {
+//     Serial.println(" - not a directory");
+//     return;
+//   }
+
+//   File file = root.openNextFile();
+//   while (file) {
+//     if (file.isDirectory()) {
+//       Serial.print("  DIR : ");
+//       Serial.println(file.name());
+//       if (levels) {
+//         listDir(fs, file.name(), levels - 1);
+//       }
+//     } else {
+//       Serial.print("  FILE: ");
+//       Serial.print(file.name());
+//       Serial.print("\tSIZE: ");
+//       Serial.println(file.size());
+//     }
+//     file = root.openNextFile();
+//   }
+// }
+
+void getParam(char* p) {
+  Serial.printf("Reading file: %s\r\n", PAR_FILE);
+  File file = SPIFFS.open(PAR_FILE, "r");
+  if (!file || file.isDirectory())
+  {
+    Serial.println("ERROR: failed to open file for reading");
+    int a = 4;
+    //p[0] = rgb[0]; p[1] = rgb[1]; p[2] = rgb[2]; p[3] = brightness;
+    return;
+  }
+  uint8_t i = 0;
+  while (file.available()) {
+    p[i] = file.read();
+    i++;
+  }
+  file.close();
+}
+
+void saveParam() {
+  Serial.printf("Writing to file: %s\r\n", PAR_FILE);
+  File file = SPIFFS.open(PAR_FILE, "w");
+  if (!file)
+  {
+    Serial.println("ERROR: failed to open file for writing");
+    return;
+  }
+  if ((true == true)
+//    file.write(rgb[0]) &&
+//    file.write(rgb[1]) &&
+//    file.write(rgb[2]) &&
+//    file.write(brightness) &&
+//    file.write(fxState) &&
+//    file.write(fxIndex)
+  ) Serial.println("- file written");
+  else Serial.println("- write failed");
+  file.close();
+}
+
+void readCredentials(char *ssid, char *pw)
+{
+  Serial.printf("Reading file: %s\r\n", WM_CRED_FILE);
+
+  File file = SPIFFS.open(WM_CRED_FILE, "r");
+  if (!file || file.isDirectory())
+  {
+    Serial.println("ERROR: failed to open file for reading");
+    return;
+  }
+
+  uint8_t row = 0;
+  uint8_t col = 0;
+  while (file.available())
+  {
+    char c = file.read();
+    //        Serial.write(c);
+    if (c != '\n')
+    {
+      if (row == 0)
+        ssid[col] = c;
+      else
+        pw[col] = c;
+      col++;
+    }
+    else
+    {
+      col = 0;
+      row++;
+    }
+  }
+  file.close();
 }

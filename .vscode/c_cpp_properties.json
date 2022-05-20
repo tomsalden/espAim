@@ -100,12 +100,16 @@
                 "c:\\users\\tomsa\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\1.22.0-97-gc752ad5-5.2.0\\lib\\gcc\\xtensa-esp32-elf\\5.2.0\\include-fixed",
                 "c:\\users\\tomsa\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\1.22.0-97-gc752ad5-5.2.0\\xtensa-esp32-elf\\include",
                 "c:\\users\\tomsa\\appdata\\local\\arduino15\\packages\\esp32\\tools\\xtensa-esp32-elf-gcc\\1.22.0-97-gc752ad5-5.2.0\\xtensa-esp32-elf\\sysroot\\usr\\include",
-                "C:\\Program Files (x86)\\Arduino\\libraries\\WiFi\\**",
                 "C:\\Users\\tomsa\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.6\\libraries\\HTTPClient\\src",
                 "C:\\Users\\tomsa\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.6\\libraries\\WiFiClientSecure\\src",
-                "C:/Program Files (x86)/Arduino/libraries/WiFi/src",
                 "C:\\Users\\tomsa\\Documents\\Arduino\\libraries\\ArduinoJson\\src",
-                "C:/Users/tomsa/AppData/Local/Arduino15/packages/esp32/hardware/esp32/1.0.6/tools/sdk/include/freertos/freertos"
+                "C:/Users/tomsa/AppData/Local/Arduino15/packages/esp32/hardware/esp32/1.0.6/tools/sdk/include/freertos/freertos",
+                "E:/Overig/espAim/Libraries/**",
+                "${workspaceFolder}/Libraries/AsyncTCP/src",
+                "C:/Users/tomsa/AppData/Local/Arduino15/packages/esp32/hardware/esp32/1.0.6/tools/sdk/include/lwip/lwip/apps",
+                "C:\\Users\\tomsa\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.6\\libraries\\SPIFFS\\src",
+                "C:\\Users\\tomsa\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.6\\libraries\\WiFi\\src",
+                "C:/Users/tomsa/AppData/Local/Arduino15/packages/esp32/hardware/esp32/1.0.6/libraries/**"
             ],
             "forcedInclude": [
                 "C:\\Users\\tomsa\\AppData\\Local\\Arduino15\\packages\\esp32\\hardware\\esp32\\1.0.6\\cores\\esp32\\Arduino.h"
