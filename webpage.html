@@ -1,0 +1,122 @@
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <style>
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    h2 {font-size: 3.0rem;}
+    p {font-size: 3.0rem;}
+    body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
+    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
+    .switch input {display: none}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
+    .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
+    input:checked+.slider {background-color: #b30000}
+    input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
+  </style>
+</head>
+<body>
+  <h2>espAim</h2>
+  <h3>The aiming arduino</h3><br>
+  <h3>Current flight information</h3><br>
+  <h4>Plane ID:<span id="IDPlane">0</span> </h4> <h4><label class="textfield"><input type="text" id="identifier" onchange="sendInformation(this)"</label></h4><br>
+  <h4>Latitude: <span id="LatPlane">0</span> </h4>
+  <h4>Longitude: <span id="LonPlane">0</span> </h4>
+  <h4>Altitude: <span id="AltPlane">0</span> </h4>
+  <h4>Speed: <span id="SpdPlane">0</span> </h4>
+  <h4>Heading: <span id="HeadPlane">0</span> </h4>
+  <h5>This ESP32 is currently aiming at planes. Later on, other implementations can be added as wel, such as planets/stars, the ISS, satelites or other things :)</h5>
+  %BUTTONPLACEHOLDER%
+<script>
+    function sendInformation(element){
+        const planeID = document.getElementById("identifier")
+        console.log("Plane id: " + element.value);
+        xhr.open("GET", "/update?output="+element.id+"&state="+element.value, true);
+    }
+
+function toggleCheckbox(element) {
+  var xhr = new XMLHttpRequest();
+  if(element.checked){ xhr.open("GET", "/update?output="+element.id+"&state=1", true); }
+  else { xhr.open("GET", "/update?output="+element.id+"&state=0", true); }
+  xhr.send();
+}
+
+setInterval(function() {
+  // Call a function repetatively with 2 Second interval
+  getIdentifier();
+  getLatitude();
+  getLongitude();
+  getAltitude();
+  getSpeed();
+  getHeading();
+}, 2000); //2000mSeconds update rate
+
+function getIdentifier() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("IDPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readID", true);
+  xhttp.send();
+}
+
+function getLatitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("LatPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readLat", true);
+  xhttp.send();
+}
+
+function getLongitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("LonPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readLon", true);
+  xhttp.send();
+}
+
+function getAltitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("AltPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readAlt", true);
+  xhttp.send();
+}
+
+function getSpeed() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("SpdPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readSpeed", true);
+  xhttp.send();
+}
+
+function getHeading() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("HeadPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readHead", true);
+  xhttp.send();
+}
+</script>
+</body>
+</html>

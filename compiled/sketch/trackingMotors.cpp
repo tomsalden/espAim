@@ -24,8 +24,9 @@ void trackingMotors::init(int Pin, int maxLoc, int minLoc, int centerLoc){
     delay(1000);
 
     //Move servos to their extremes for startup
-    initMoving();
+    //initMoving();
     Serial.println("Initialisation is done!");
+    servoTime = millis();
 }
 
 void trackingMotors::initMoving(){
@@ -67,7 +68,7 @@ void trackingMotors::initMoving(){
 }
 
 void trackingMotors::update(){
-    static int servoTime = millis();
+    //static int servoTime = millis();
     if (millis() < (servoTime + millisperStep)){
         return;
     }
@@ -75,74 +76,16 @@ void trackingMotors::update(){
         return;
     }
     if (NewLocation > Location){
-        Location++;
+        Location = Location + (NewLocation - Location)/5;
     }
     if (NewLocation < Location){
-        Location--;
+        Location = Location + (NewLocation - Location)/5;
     }
     Servomotor.write(Location);
     servoTime = millis();
     return;
 }
 
-// void trackingMotors::update(){
-//     static int servoTime = millis();
-    
-//     //Don't do anything if it is too early
-//     if (millis() < (servoTime + millisperStep)){
-//         return;
-//     }
-
-//     //directionServo.attach(DIRECTION_PIN, directionMin, directionMax);
-//     //altitudeServo.attach(ALTITUDE_PIN, altitudeMin, altitudeMax);
-
-//     bool directionUpdate = false;
-//     bool altitudeUpdate = false;
-
-//     //If the new location is bigger than the current location, increase the current location
-//     if (directionNewLocation > directionLocation){
-//         directionLocation++;
-//         directionUpdate = true;
-//     }
-
-//     //If the new loation is smaller than the current location, decrease the current location
-//     if (directionNewLocation < directionLocation){
-//         directionLocation--;
-//         directionUpdate = true;
-//     }
-
-//     //If the new location is bigger than the current location, increase the current location
-//     if ((altitudeNewLocation > altitudeLocation) && (directionUpdate == false)){
-//         altitudeLocation++;
-//         altitudeUpdate = true;
-//     }
-
-//     //If the new loation is smaller than the current location, decrease the current location
-//     if ((altitudeNewLocation < altitudeLocation) && (directionUpdate == false)){
-//         altitudeLocation--;
-//         altitudeUpdate = true;
-//     }
-
-//     //Update direction if necessary
-//     if (directionUpdate == true){
-//         Serial.print("Direction updated: ");
-//         Serial.println(directionLocation);
-//         directionServo.write(directionLocation);
-//         delay(20);
-//     }
-
-//     if (altitudeUpdate == true){
-//         Serial.print("Altitude updated: ");
-//         Serial.println(altitudeLocation);
-//         altitudeServo.write(altitudeLocation);
-//         delay(20);
-//     }
-
-//     Serial.print("Servo Status");
-//     Serial.println(directionServo.attached());
-//     Serial.println(servoTime);
-
-//     servoTime = millis();
-//     return;
-// }
-
+void trackingMotors::error(){
+    //Add sequence for an error :)
+}
