@@ -1,24 +1,20 @@
 #include "Arduino.h"
-#include "SPIFFS.h"
-#include "FS.h"
+
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include "credentials.h"
 
 class WiFiManager{
     public:
-        void setup();
-        bool WiFiManagerBegin(const char *ap_ssid, const char *ap_pw);
-        void setupWMWebpages();
-        void setupWebPages();
+        void update(WiFiServer server);
+
 
         WiFiManager();
-
     private:
-        void readCredentials(char *ssid, char *pw);
-        void writeCredentials(const char *ssid, const char *pw);
-        void clearWMCredentials();
-        bool WiFiConnect(const char *ssid, const char *pw);
-        int scanWifiNetworks();
-        void listNetworks(int n);
+    unsigned long currentTime = millis();
+    unsigned long previousTime = 0;
+    const long timeoutTime = 2000;
+    String header;
+    String output26State = "off";
+    String output27State = "off";
+    const int output26 = 26;
+    const int output27 = 27;
 };

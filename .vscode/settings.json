@@ -7,6 +7,6 @@
         "*.tcc": "cpp",
         "fstream": "cpp"
     },
-    "C_Cpp.errorSquiggles": "Disabled",
+    "C_Cpp.errorSquiggles": "Enabled",
 
 }

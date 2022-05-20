@@ -89,6 +89,7 @@ void planeInformation::update(){
     Serial.print(planeAlt);
     Serial.print(", Speed: ");
     Serial.print(planeSpeed);
+    Serial.println("");
 
 
     setDirectionAltitude(curLat, curLon, curAlt, planeLat, planeLon, planeAlt);

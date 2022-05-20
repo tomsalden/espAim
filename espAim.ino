@@ -3,14 +3,11 @@
 #include "WiFiManager.h"
 
 #include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+
 #include <HTTPClient.h>
 #include "credentials.h"
-
-
-//#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include "SPIFFS.h"
-#include "FS.h"
 
 #ifndef CREDENTIALS_H
 #pragma error "!!!!!!!!"
@@ -24,7 +21,6 @@
 trackingMotors trackingDirection; 
 trackingMotors trackingAltitude;
 planeInformation plane;
-WiFiManager WiFiMgr;
 
 struct GPSLocation {
     float latitude;
@@ -33,16 +29,164 @@ struct GPSLocation {
 };
 
 int servoTime;
-#define PAR_FILE "/par.dat"
 
-//Define webserver on port 80
+const char* PARAM_INPUT_1 = "output";
+const char* PARAM_INPUT_2 = "state";
+
 AsyncWebServer server(80);
 
-void notFound(AsyncWebServerRequest *request)
-{
-  request->send(404, "text/plain", "Not found");
+const char index_html[] PROGMEM = R"rawliteral(
+<!DOCTYPE HTML><html>
+<head>
+  <title>ESP Web Server</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <style>
+    html {font-family: Arial; display: inline-block; text-align: center;}
+    h2 {font-size: 3.0rem;}
+    p {font-size: 3.0rem;}
+    body {max-width: 600px; margin:0px auto; padding-bottom: 25px;}
+    .switch {position: relative; display: inline-block; width: 120px; height: 68px} 
+    .switch input {display: none}
+    .slider {position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; border-radius: 6px}
+    .slider:before {position: absolute; content: ""; height: 52px; width: 52px; left: 8px; bottom: 8px; background-color: #fff; -webkit-transition: .4s; transition: .4s; border-radius: 3px}
+    input:checked+.slider {background-color: #b30000}
+    input:checked+.slider:before {-webkit-transform: translateX(52px); -ms-transform: translateX(52px); transform: translateX(52px)}
+  </style>
+</head>
+<body>
+  <h2>espAim</h2>
+  <h3>The aiming arduino</h3><br>
+  <h3>Current flight information</h3><br>
+  <h4>Plane ID:<span id="IDPlane">0</span> </h4> <h4><label class="textfield"><input type="text" id="identifier" onchange="sendInformation(this)"</label></h4><br>
+  <h4>Latitude: <span id="LatPlane">0</span> </h4>
+  <h4>Longitude: <span id="LonPlane">0</span> </h4>
+  <h4>Altitude: <span id="AltPlane">0</span> </h4>
+  <h4>Speed: <span id="SpdPlane">0</span> </h4>
+  <h4>Heading: <span id="HeadPlane">0</span> </h4>
+  <h5>This ESP32 is currently aiming at planes. Later on, other implementations can be added as wel, such as planets/stars, the ISS, satelites or other things :)</h5>
+  %BUTTONPLACEHOLDER%
+<script>
+    function sendInformation(element){
+        const planeID = document.getElementById("identifier")
+        console.log("Plane id: " + element.value);
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", "/update?output="+element.id+"&state="+element.value, true);
+        xhr.send();
+    }
+
+function toggleCheckbox(element) {
+  var xhr = new XMLHttpRequest();
+  if(element.checked){ xhr.open("GET", "/update?output="+element.id+"&state=1", true); }
+  else { xhr.open("GET", "/update?output="+element.id+"&state=0", true); }
+  xhr.send();
 }
 
+setInterval(function() {
+  // Call a function repetatively with 2 Second interval
+  getIdentifier();
+  getLatitude();
+  getLongitude();
+  getAltitude();
+  getSpeed();
+  getHeading();
+}, 2000); //2000mSeconds update rate
+
+function getIdentifier() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("IDPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readID", true);
+  xhttp.send();
+}
+
+function getLatitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("LatPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readLat", true);
+  xhttp.send();
+}
+
+function getLongitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("LonPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readLon", true);
+  xhttp.send();
+}
+
+function getAltitude() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("AltPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readAlt", true);
+  xhttp.send();
+}
+
+function getSpeed() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("SpdPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readSpeed", true);
+  xhttp.send();
+}
+
+function getHeading() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("HeadPlane").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readHead", true);
+  xhttp.send();
+}
+</script>
+</body>
+</html>
+)rawliteral";
+
+// Replaces placeholder with button section in your web page
+String processor(const String& var){
+  //Serial.println(var);
+  if(var == "BUTTONPLACEHOLDER"){
+    String buttons = "";
+    buttons += "<h4>Output - GPIO 2</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"2\" " + outputState(2) + "><span class=\"slider\"></span></label>";
+    buttons += "<h4>Output - GPIO 4</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"4\" " + outputState(4) + "><span class=\"slider\"></span></label>";
+    buttons += "<h4>Output - GPIO 33</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"33\" " + outputState(33) + "><span class=\"slider\"></span></label>";
+    return buttons;
+  }
+  return String();
+}
+
+String outputState(int output){
+  if(digitalRead(output)){
+    return "checked";
+  }
+  else {
+    return "";
+  }
+}
+
+void handleADC() {
+
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -62,36 +206,93 @@ void setup() {
 
   plane.init(51.997842,4.374279);
 
-  if (!SPIFFS.begin(true)){
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    delay(1000);
-    ESP.restart();
-  }
-
-  listDir(SPIFFS, "/", 1);
-
-  WiFi.hostname(HOSTNAME);
+  //WiFi.hostname(HOSTNAME);
 
   Serial.println("Setting up WiFi");
-  //WiFi.encryptionType(3);
-  //WiFi.begin(AP_SSID,AP_PASS);
-  
-  if (!WiFiMgr.WiFiManagerBegin(AP_SSID, AP_PASS)){
-    // setup wifimanager config portal
-    WiFiMgr.setupWMWebpages();
+  WiFi.encryptionType(3);
+  WiFi.begin(AP_SSID,AP_PASS);
+
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
   }
-  WiFiMgr.setupWebPages();
+  Serial.println("");
+  Serial.print("Connected with ip: ");
+  Serial.println(WiFi.localIP());
 
-  server.onNotFound(notFound);
   Serial.println("starting server");
-  server.begin();
+    // Route for root / web page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send_P(200, "text/html", index_html, processor);
+  });
 
+  server.on("/readID", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(plane.identifier);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
+  server.on("/readLat", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(plane.planeLat);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+  
+  server.on("/readLon", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(plane.planeLon);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
+  server.on("/readAlt", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(plane.planeAlt);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
+  server.on("/readSpeed", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(plane.planeSpeed);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+  
+  server.on("/readHead", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String("Unknown yet");
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
+  // Send a GET request to <ESP_IP>/update?output=<inputMessage1>&state=<inputMessage2>
+  server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request) {
+    String inputMessage1;
+    String inputMessage2;
+    // GET input1 value on <ESP_IP>/update?output=<inputMessage1>&state=<inputMessage2>
+    if (request->hasParam(PARAM_INPUT_1) && request->hasParam(PARAM_INPUT_2)) {
+      inputMessage1 = request->getParam(PARAM_INPUT_1)->value();
+      inputMessage2 = request->getParam(PARAM_INPUT_2)->value();
+
+      Serial.print("Recieved message. Message1: ");
+      Serial.print(inputMessage1);
+      Serial.print(". Message 2: ");
+      Serial.println(inputMessage2);
+      
+      if(inputMessage1 == "identifier"){
+        plane.identifier = inputMessage2;
+        Serial.println("Updated plane!");
+      }
+      else{
+      digitalWrite(inputMessage1.toInt(), inputMessage2.toInt());
+      }
+    }
+    else {
+      inputMessage1 = "No message sent";
+      inputMessage2 = "No message sent";
+    }
+    Serial.print("GPIO: ");
+    Serial.print(inputMessage1);
+    Serial.print(" - Set to: ");
+    Serial.println(inputMessage2);
+    request->send(200, "text/plain", "OK");
+  });
+
+  server.begin();
   
 
   trackingAltitude.NewLocation = 1995;
-
-  Serial.print("Connected with ip: ");
-  Serial.println(WiFi.localIP());
 
   Serial.println("Starting Webserver");
 
@@ -105,8 +306,9 @@ void loop() {
   plane.update();
   
   trackingDirection.update();
+  delay(100);
   trackingAltitude.update();
-  delay(10);
+  
 
   if (Serial.available() > 0){
     String identifier = Serial.readString();
@@ -145,6 +347,34 @@ float getHeading(GPSLocation curLoc, GPSLocation newLoc) {
   return angle; //Angle relative to North
 }
 
+//Get current altitude reading from the 2 GPS coordinates
+float getAltitude(GPSLocation curloc, GPSLocation newloc){
+  //First determine the distance between the two coordinates on the ground
+  float lat1 = deg2rad(curloc.latitude);
+  float lon1 = deg2rad(curloc.longitude);
+  float lat2 = deg2rad(newloc.latitude);
+  float lon2 = deg2rad(newloc.longitude);
+  
+  float dlat = lat2-lat1;
+  float dlon = lon2-lon1;
+
+  float a = sin(dlat/2)*sin(dlat/2) + cos(lat1) * cos(lat2) * sin(dlon/2) * sin(dlon/2);
+  float c = 2 * atan2(sqrt(a),sqrt(1-a));
+  float d = 6371*1000*c;
+  Serial.print("Distance: ");
+  Serial.println(d);
+
+  Serial.print("Altitude (m): ");
+  Serial.println(newloc.altitude*0.3048);
+
+  //Now use the altitude and distance to determine the altitude angle
+  float altangle = tan((newloc.altitude*0.3048-curloc.altitude)/d);
+  altangle = rad2deg(altangle);
+
+  Serial.print("Angle from 0: ");
+  Serial.println(altangle);
+}
+
 //Function to set the direction and altitude of the servos
 void setDirectionAltitude(double curLat, double curLon, double curAlt, double newLat, double newLon, double newAlt){
   //Create GPS struct
@@ -153,21 +383,24 @@ void setDirectionAltitude(double curLat, double curLon, double curAlt, double ne
 
   //Determine heading
   float direction = getHeading(curLoc, newLoc);
+  float altitude = getAltitude(curLoc, newLoc);
 
   //Set the altitude, irrespective of if it is in the front or the back (from 0 to 90 degrees)
   // Need distance...
 
   //Figure out if the direction is left or right
   if (direction > 0){
-    Serial.println("Heading is to the right");
+    Serial.println("Heading is to the right of the device");
     trackingAltitude.objectFront = true;
     trackingDirection.NewLocation = map(direction, 0, 180, trackingDirection.Max, trackingDirection.Min);
+    trackingAltitude.NewLocation = map(altitude, 0, 90, trackingAltitude.Min, trackingAltitude.Center);
     return;
   }
 
-  Serial.println("Heading is behind the device");
+  Serial.println("Heading is to the left of the device");
   trackingAltitude.objectFront = false;
   trackingDirection.NewLocation = map(direction, 0, -180, trackingDirection.Min, trackingDirection.Max);
+  trackingAltitude.NewLocation = map(altitude, 0, 90, trackingAltitude.Max, trackingAltitude.Center);
 
   // if(direction > 0){
   //     Serial.println("Heading is to the right");
@@ -178,107 +411,4 @@ void setDirectionAltitude(double curLat, double curLon, double curAlt, double ne
   // Serial.println("Heading is to the left");
   // trackingDirection.NewLocation = map(direction, -91, -180, trackingDirection.Center, trackingDirection.Max);
   return;
-}
-
-// void listDir(fs::FS &fs, const char * dirname, uint8_t levels) {
-//   Serial.printf("Listing directory: %s\r\n", dirname);
-
-//   File root = fs.open(dirname);
-//   if (!root) {
-//     Serial.println("- failed to open directory");
-//     return;
-//   }
-//   if (!root.isDirectory()) {
-//     Serial.println(" - not a directory");
-//     return;
-//   }
-
-//   File file = root.openNextFile();
-//   while (file) {
-//     if (file.isDirectory()) {
-//       Serial.print("  DIR : ");
-//       Serial.println(file.name());
-//       if (levels) {
-//         listDir(fs, file.name(), levels - 1);
-//       }
-//     } else {
-//       Serial.print("  FILE: ");
-//       Serial.print(file.name());
-//       Serial.print("\tSIZE: ");
-//       Serial.println(file.size());
-//     }
-//     file = root.openNextFile();
-//   }
-// }
-
-void getParam(char* p) {
-  Serial.printf("Reading file: %s\r\n", PAR_FILE);
-  File file = SPIFFS.open(PAR_FILE, "r");
-  if (!file || file.isDirectory())
-  {
-    Serial.println("ERROR: failed to open file for reading");
-    int a = 4;
-    //p[0] = rgb[0]; p[1] = rgb[1]; p[2] = rgb[2]; p[3] = brightness;
-    return;
-  }
-  uint8_t i = 0;
-  while (file.available()) {
-    p[i] = file.read();
-    i++;
-  }
-  file.close();
-}
-
-void saveParam() {
-  Serial.printf("Writing to file: %s\r\n", PAR_FILE);
-  File file = SPIFFS.open(PAR_FILE, "w");
-  if (!file)
-  {
-    Serial.println("ERROR: failed to open file for writing");
-    return;
-  }
-  if ((true == true)
-//    file.write(rgb[0]) &&
-//    file.write(rgb[1]) &&
-//    file.write(rgb[2]) &&
-//    file.write(brightness) &&
-//    file.write(fxState) &&
-//    file.write(fxIndex)
-  ) Serial.println("- file written");
-  else Serial.println("- write failed");
-  file.close();
-}
-
-void readCredentials(char *ssid, char *pw)
-{
-  Serial.printf("Reading file: %s\r\n", WM_CRED_FILE);
-
-  File file = SPIFFS.open(WM_CRED_FILE, "r");
-  if (!file || file.isDirectory())
-  {
-    Serial.println("ERROR: failed to open file for reading");
-    return;
-  }
-
-  uint8_t row = 0;
-  uint8_t col = 0;
-  while (file.available())
-  {
-    char c = file.read();
-    //        Serial.write(c);
-    if (c != '\n')
-    {
-      if (row == 0)
-        ssid[col] = c;
-      else
-        pw[col] = c;
-      col++;
-    }
-    else
-    {
-      col = 0;
-      row++;
-    }
-  }
-  file.close();
 }
