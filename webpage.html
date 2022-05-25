@@ -28,6 +28,7 @@
   <h4>Heading: <span id="HeadPlane">0</span> </h4>
   <h5>This ESP32 is currently aiming at planes. Later on, other implementations can be added as wel, such as planets/stars, the ISS, satelites or other things :)</h5>
   %BUTTONPLACEHOLDER%
+  <h4>Initialise Motors</h4><label class="switch"><input type="checkbox" onchange="toggleCheckbox(this)" id="2" " + outputState(2) + "><span class="slider"></span></label>
 <script>
     function sendInformation(element){
         const planeID = document.getElementById("identifier")

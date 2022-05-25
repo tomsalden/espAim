@@ -3,7 +3,7 @@
 
 // AP Settings define how you connect to the wifiManager 
 // AP_SSID is the network name, AP_PASS is the password used to connect to it.
-const char* AP_SSID = "Fam.Salden2";   // DEFAULTVALUE: Schrodingers Lantern
+const char* AP_SSID = "Fam.Salden";   // DEFAULTVALUE: Schrodingers Lantern
 const char* AP_PASS = "tomenluc";
 
 // HOSTNAME is the name of the device. 

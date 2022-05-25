@@ -17,9 +17,10 @@ class trackingMotors{
     void init(int Pin, int maxLoc, int minLoc, int centerLoc);
     void update();
     void error();
+    
 
   private:
     Servo Servomotor;
-    void initMoving();
     int servoTime;
+    void initMoving();
 };

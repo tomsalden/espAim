@@ -31,6 +31,9 @@ struct GPSLocation {
 };
 
 int servoTime;
+bool motorInitialisation = false;
+float altangle;
+float dirangle;
 
 const char* PARAM_INPUT_1 = "output";
 const char* PARAM_INPUT_2 = "state";
@@ -65,7 +68,9 @@ const char index_html[] PROGMEM = R"rawliteral(
   <h4>Longitude: <span id="LonPlane">0</span> </h4>
   <h4>Altitude: <span id="AltPlane">0</span> </h4>
   <h4>Speed: <span id="SpdPlane">0</span> </h4>
-  <h4>Heading: <span id="HeadPlane">0</span> </h4>
+  <h4>Heading: <span id="HeadPlane">0</span> </h4><br>
+  <h4>Direction angle from Servo: <span id="AngleDirServo">0</span> </h4>
+  <h4>Altitude angle from Servo: <span id="AngleAltServo">0</span> </h4>
   <h5>This ESP32 is currently aiming at planes. Later on, other implementations can be added as wel, such as planets/stars, the ISS, satelites or other things :)</h5>
   %BUTTONPLACEHOLDER%
 <script>
@@ -92,6 +97,8 @@ setInterval(function() {
   getAltitude();
   getSpeed();
   getHeading();
+  getdirAngle();
+  getaltAngle();
 }, 2000); //2000mSeconds update rate
 
 function getIdentifier() {
@@ -159,38 +166,39 @@ function getHeading() {
   xhttp.open("GET", "readHead", true);
   xhttp.send();
 }
+
+function getdirAngle() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("AngleDirServo").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readDirAngle", true);
+  xhttp.send();
+}
+
+function getaltAngle() {
+  var xhttp = new XMLHttpRequest();
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      document.getElementById("AngleAltServo").innerHTML = this.responseText;
+    }
+  };
+  xhttp.open("GET", "readAltAngle", true);
+  xhttp.send();
+}
 </script>
 </body>
 </html>
 )rawliteral";
 
 // Replaces placeholder with button section in your web page
-#line 166 "e:\\Overig\\espAim\\espAim.ino"
-String processor(const String& var);
-#line 178 "e:\\Overig\\espAim\\espAim.ino"
-String outputState(int output);
-#line 187 "e:\\Overig\\espAim\\espAim.ino"
-void handleADC();
-#line 191 "e:\\Overig\\espAim\\espAim.ino"
-void setup();
-#line 304 "e:\\Overig\\espAim\\espAim.ino"
-void loop();
-#line 327 "e:\\Overig\\espAim\\espAim.ino"
-float deg2rad(float deg);
-#line 330 "e:\\Overig\\espAim\\espAim.ino"
-float rad2deg(float rad);
-#line 335 "e:\\Overig\\espAim\\espAim.ino"
-float getHeading(GPSLocation curLoc, GPSLocation newLoc);
-#line 351 "e:\\Overig\\espAim\\espAim.ino"
-float getAltitude(GPSLocation curloc, GPSLocation newloc);
-#line 379 "e:\\Overig\\espAim\\espAim.ino"
-void setDirectionAltitude(double curLat, double curLon, double curAlt, double newLat, double newLon, double newAlt);
-#line 166 "e:\\Overig\\espAim\\espAim.ino"
 String processor(const String& var){
   //Serial.println(var);
   if(var == "BUTTONPLACEHOLDER"){
     String buttons = "";
-    buttons += "<h4>Output - GPIO 2</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"2\" " + outputState(2) + "><span class=\"slider\"></span></label>";
+    buttons += "<h4>Initialise Motors</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"2\" " + outputState(2) + "><span class=\"slider\"></span></label>";
     buttons += "<h4>Output - GPIO 4</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"4\" " + outputState(4) + "><span class=\"slider\"></span></label>";
     buttons += "<h4>Output - GPIO 33</h4><label class=\"switch\"><input type=\"checkbox\" onchange=\"toggleCheckbox(this)\" id=\"33\" " + outputState(33) + "><span class=\"slider\"></span></label>";
     return buttons;
@@ -227,9 +235,9 @@ void setup() {
   trackingDirection.init(13, 2500, 500, 1500);
   trackingAltitude.init(12, 2500, 500, 1500);
 
-  plane.init(51.997842,4.374279);
+  plane.init(52.197136,4.754039);
 
-  //WiFi.hostname(HOSTNAME);
+  WiFi.hostname(HOSTNAME);
 
   Serial.println("Setting up WiFi");
   WiFi.encryptionType(3);
@@ -279,6 +287,16 @@ void setup() {
      request->send(200, "text/plane", info); //Send ADC value only to client ajax request
   });
 
+  server.on("/readDirAngle", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(dirangle);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
+  server.on("/readAltAngle", HTTP_GET, [](AsyncWebServerRequest *request){
+    String info = String(altangle);
+     request->send(200, "text/plane", info); //Send ADC value only to client ajax request
+  });
+
   // Send a GET request to <ESP_IP>/update?output=<inputMessage1>&state=<inputMessage2>
   server.on("/update", HTTP_GET, [] (AsyncWebServerRequest *request) {
     String inputMessage1;
@@ -297,6 +315,10 @@ void setup() {
         plane.identifier = inputMessage2;
         Serial.println("Updated plane!");
       }
+      // if(inputMessage1 == "2"){
+      //   //Initialise the motors
+      //   motorInitialisation = true;
+      // }
       else{
       digitalWrite(inputMessage1.toInt(), inputMessage2.toInt());
       }
@@ -328,10 +350,18 @@ void loop() {
   // put your main code here, to run repeatedly:
   plane.update();
   
-  trackingDirection.update();
-  delay(100);
   trackingAltitude.update();
-  
+  trackingDirection.update();
+  //delay(100);
+
+  // if (motorInitialisation == true){
+  //   delay(1000);
+  //   trackingDirection.initMoving();
+  //   delay(1000);
+  //   trackingAltitude.initMoving();
+  //   delay(5000);
+  //   motorInitialisation = false;
+  // }
 
   if (Serial.available() > 0){
     String identifier = Serial.readString();
@@ -364,10 +394,10 @@ float getHeading(GPSLocation curLoc, GPSLocation newLoc) {
 
   float x = cos(lat2) * sin(lon2-lon1);
   float y = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon2-lon1);
-  float angle = rad2deg(atan2(x,y));
-  Serial.print("Heading: ");
-  Serial.println(angle);
-  return angle; //Angle relative to North
+  dirangle = rad2deg(atan2(x,y));
+  // Serial.print("Heading: ");
+  // Serial.println(dirangle);
+  return dirangle; //Angle relative to North
 }
 
 //Get current altitude reading from the 2 GPS coordinates
@@ -384,18 +414,19 @@ float getAltitude(GPSLocation curloc, GPSLocation newloc){
   float a = sin(dlat/2)*sin(dlat/2) + cos(lat1) * cos(lat2) * sin(dlon/2) * sin(dlon/2);
   float c = 2 * atan2(sqrt(a),sqrt(1-a));
   float d = 6371*1000*c;
-  Serial.print("Distance: ");
-  Serial.println(d);
+  // Serial.print("Distance: ");
+  // Serial.println(d);
 
-  Serial.print("Altitude (m): ");
-  Serial.println(newloc.altitude*0.3048);
+  // Serial.print("Altitude (m): ");
+  // Serial.println(newloc.altitude*0.3048);
 
   //Now use the altitude and distance to determine the altitude angle
-  float altangle = tan((newloc.altitude*0.3048-curloc.altitude)/d);
+  altangle = atan((newloc.altitude*0.3048-curloc.altitude)/d);
   altangle = rad2deg(altangle);
 
-  Serial.print("Angle from 0: ");
-  Serial.println(altangle);
+  // Serial.print("Angle from 0: ");
+  // Serial.println(altangle);
+  return altangle;
 }
 
 //Function to set the direction and altitude of the servos
@@ -404,34 +435,22 @@ void setDirectionAltitude(double curLat, double curLon, double curAlt, double ne
   GPSLocation curLoc = {curLat, curLon, curAlt};
   GPSLocation newLoc = {newLat, newLon, newAlt};
 
-  //Determine heading
+  //Determine heading and altitude
   float direction = getHeading(curLoc, newLoc);
   float altitude = getAltitude(curLoc, newLoc);
 
-  //Set the altitude, irrespective of if it is in the front or the back (from 0 to 90 degrees)
-  // Need distance...
-
   //Figure out if the direction is left or right
   if (direction > 0){
-    Serial.println("Heading is to the right of the device");
+    // Serial.println("Heading is to the right of the device");
     trackingAltitude.objectFront = true;
     trackingDirection.NewLocation = map(direction, 0, 180, trackingDirection.Max, trackingDirection.Min);
     trackingAltitude.NewLocation = map(altitude, 0, 90, trackingAltitude.Min, trackingAltitude.Center);
     return;
   }
 
-  Serial.println("Heading is to the left of the device");
+  // Serial.println("Heading is to the left of the device");
   trackingAltitude.objectFront = false;
   trackingDirection.NewLocation = map(direction, 0, -180, trackingDirection.Min, trackingDirection.Max);
   trackingAltitude.NewLocation = map(altitude, 0, 90, trackingAltitude.Max, trackingAltitude.Center);
-
-  // if(direction > 0){
-  //     Serial.println("Heading is to the right");
-  //     trackingDirection.NewLocation = map(direction, 91, 180, trackingDirection.Center, trackingDirection.Min);
-  //     return;
-  // }
-
-  // Serial.println("Heading is to the left");
-  // trackingDirection.NewLocation = map(direction, -91, -180, trackingDirection.Center, trackingDirection.Max);
   return;
 }
